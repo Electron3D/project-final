@@ -4,10 +4,15 @@ import com.javarush.jira.bugtracking.Handlers;
 import com.javarush.jira.bugtracking.task.to.ActivityTo;
 import com.javarush.jira.common.error.DataConflictException;
 import com.javarush.jira.login.AuthUser;
+import com.javarush.jira.ref.RefType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
+import java.time.LocalDateTime;
+import java.time.Period;
+import java.util.Comparator;
 import java.util.List;
 
 import static com.javarush.jira.bugtracking.task.TaskUtil.getLatestValue;
@@ -16,6 +21,7 @@ import static com.javarush.jira.bugtracking.task.TaskUtil.getLatestValue;
 @RequiredArgsConstructor
 public class ActivityService {
     private final TaskRepository taskRepository;
+    private final ActivityRepository activityRepository;
 
     private final Handlers.ActivityHandler handler;
 
@@ -72,5 +78,45 @@ public class ActivityService {
                 task.setTypeCode(latestType);
             }
         }
+    }
+
+    public long getTaskTimeInWork(long taskId) {
+        List<Activity> activities = activityRepository.findAllByTaskId(taskId);
+        activities.sort(Comparator.comparing(Activity::getUpdated));
+        long totalTime = 0;
+        LocalDateTime startTime = null;
+
+        for (Activity activity : activities) {
+            String statusCode = activity.getStatusCode();
+            if ("in_progress".equals(statusCode)) {
+                startTime = activity.getUpdated();
+            }
+            if ("ready_to_review".equals(statusCode) && startTime != null) {
+                long timeSpent = Duration.between(startTime, activity.getUpdated()).toMillis();
+                totalTime += timeSpent;
+                startTime = null;
+            }
+        }
+        return totalTime;
+    }
+
+    public long getTaskTimeInTest(long taskId) {
+        List<Activity> activities = activityRepository.findAllByTaskId(taskId);
+        activities.sort(Comparator.comparing(Activity::getUpdated));
+        long totalTime = 0;
+        LocalDateTime startTime = null;
+
+        for (Activity activity : activities) {
+            String statusCode = activity.getStatusCode();
+            if ("ready_to_review".equals(statusCode)) {
+                startTime = activity.getUpdated();
+            }
+            if ("done".equals(statusCode) && startTime != null) {
+                long timeSpent = Duration.between(startTime, activity.getUpdated()).toMillis();
+                totalTime += timeSpent;
+                startTime = null;
+            }
+        }
+        return totalTime;
     }
 }

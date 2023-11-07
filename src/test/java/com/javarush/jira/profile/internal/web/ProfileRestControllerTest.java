@@ -4,9 +4,7 @@ import com.javarush.jira.AbstractControllerTest;
 import com.javarush.jira.common.BaseHandler;
 import com.javarush.jira.profile.ContactTo;
 import com.javarush.jira.profile.ProfileTo;
-import com.javarush.jira.profile.internal.ProfileRepository;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithUserDetails;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
@@ -74,5 +72,16 @@ class ProfileRestControllerTest extends AbstractControllerTest {
                 .andDo(print())
                 .andExpect(status().isNoContent());
         PROFILE_TO_MATCHER.assertMatch(profileTo, ProfileTestData.getUpdatedTo());
+    }
+
+    @Test
+    @WithUserDetails(value = GUEST_MAIL)
+    void update_with_invalid_to() throws Exception {
+        ProfileTo profileTo = getInvalidTo();
+        perform(MockMvcRequestBuilders.put(REST_URL_PROFILE)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(writeValue(profileTo)))
+                .andDo(print())
+                .andExpect(status().isUnprocessableEntity());
     }
 }

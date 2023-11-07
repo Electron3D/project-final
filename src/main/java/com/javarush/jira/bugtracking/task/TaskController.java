@@ -3,10 +3,7 @@ package com.javarush.jira.bugtracking.task;
 import com.javarush.jira.bugtracking.Handlers;
 import com.javarush.jira.bugtracking.UserBelong;
 import com.javarush.jira.bugtracking.UserBelongRepository;
-import com.javarush.jira.bugtracking.task.to.ActivityTo;
-import com.javarush.jira.bugtracking.task.to.TaskTo;
-import com.javarush.jira.bugtracking.task.to.TaskToExt;
-import com.javarush.jira.bugtracking.task.to.TaskToFull;
+import com.javarush.jira.bugtracking.task.to.*;
 import com.javarush.jira.bugtracking.tree.ITreeNode;
 import com.javarush.jira.common.util.Util;
 import com.javarush.jira.login.AuthUser;
@@ -23,6 +20,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Set;
 
 import static com.javarush.jira.common.BaseHandler.createdResponse;
 
@@ -131,6 +129,42 @@ public class TaskController {
     public List<ActivityTo> getComments(@PathVariable long id) {
         log.info("get comments for task with id={}", id);
         return activityHandler.getMapper().toToList(activityHandler.getRepository().findAllComments(id));
+    }
+
+    @PostMapping("/{id}/tags")
+    @ResponseStatus(HttpStatus.CREATED)
+    public void addTag(@PathVariable Long id, @RequestBody String tag) {
+        log.info("create tag={} for task with id={}", tag, id);
+        TaskToWithTags taskTo = taskService.getWithTags(id);
+        taskTo.getTags().add(tag);
+        taskService.updateWithTags(taskTo, id);
+    }
+
+    @GetMapping("/{id}/tags")
+    public Set<String> getAllTags(@PathVariable long id) {
+        log.info("get tags for task with id={}", id);
+        return taskService.getWithTags(id).getTags();
+    }
+
+    @PutMapping("/{id}/tags")
+    @ResponseStatus(HttpStatus.CREATED)
+    public void updateTag(@PathVariable Long id, @RequestBody String tagToUpdate, @RequestBody String newTag) {
+        log.info("update tag={} for task with id={}, newTag={}", tagToUpdate, id, newTag);
+        TaskToWithTags taskTo = taskService.getWithTags(id);
+        Set<String> tags = taskTo.getTags();
+        tags.remove(tagToUpdate);
+        tags.add(newTag);
+        taskService.updateWithTags(taskTo, id);
+    }
+
+    @DeleteMapping("/{id}/tags")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteTag(@PathVariable long id, @RequestBody String tag) {
+        log.info("delete tag={} for task with id={}", tag, id);
+        TaskToWithTags taskTo = taskService.getWithTags(id);
+        Set<String> tags = taskTo.getTags();
+        tags.remove(tag);
+        taskService.updateWithTags(taskTo, id);
     }
 
     @PostMapping(value = "/activities", consumes = MediaType.APPLICATION_JSON_VALUE)

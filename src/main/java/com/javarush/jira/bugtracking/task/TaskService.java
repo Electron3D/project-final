@@ -7,8 +7,10 @@ import com.javarush.jira.bugtracking.sprint.Sprint;
 import com.javarush.jira.bugtracking.sprint.SprintRepository;
 import com.javarush.jira.bugtracking.task.mapper.TaskExtMapper;
 import com.javarush.jira.bugtracking.task.mapper.TaskFullMapper;
+import com.javarush.jira.bugtracking.task.mapper.TaskWithTagsMapper;
 import com.javarush.jira.bugtracking.task.to.TaskToExt;
 import com.javarush.jira.bugtracking.task.to.TaskToFull;
+import com.javarush.jira.bugtracking.task.to.TaskToWithTags;
 import com.javarush.jira.common.error.DataConflictException;
 import com.javarush.jira.common.error.NotFoundException;
 import com.javarush.jira.common.util.Util;
@@ -36,6 +38,7 @@ public class TaskService {
     private final Handlers.TaskExtHandler handler;
     private final Handlers.ActivityHandler activityHandler;
     private final TaskFullMapper fullMapper;
+    private final TaskWithTagsMapper withTagsMapper;
     private final SprintRepository sprintRepository;
     private final TaskExtMapper extMapper;
     private final UserBelongRepository userBelongRepository;
@@ -81,6 +84,14 @@ public class TaskService {
     @Transactional
     public void update(TaskToExt taskTo, long id) {
         if (!taskTo.equals(get(taskTo.id()))) {
+            handler.updateFromTo(taskTo, id);
+            activityHandler.create(makeActivity(id, taskTo));
+        }
+    }
+
+    @Transactional
+    public void updateWithTags(TaskToWithTags taskTo, long id) {
+        if (!taskTo.equals(getWithTags(taskTo.id()))) {
             handler.updateFromTo(taskTo, id);
             activityHandler.create(makeActivity(id, taskTo));
         }
@@ -139,5 +150,10 @@ public class TaskService {
         if (!userType.equals(possibleUserType)) {
             throw new DataConflictException(String.format(assign ? CANNOT_ASSIGN : CANNOT_UN_ASSIGN, userType, task.getStatusCode()));
         }
+    }
+
+    public TaskToWithTags getWithTags(Long id) {
+        Task task = Util.checkExist(id, handler.getRepository().findWithTagsById(id));
+        return withTagsMapper.toTo(task);
     }
 }
